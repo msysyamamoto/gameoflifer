@@ -1,13 +1,30 @@
+use clap::Parser;
 use std::{
     io::{self, Write},
     thread, time,
 };
 
-const WIDTH: i32 = 29;
-const HEIGHT: i32 = 11;
-const SLEEP_MILLIS: u64 = 50;
-
 type Pos = (i32, i32);
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None, disable_help_flag = true)]
+struct Args {
+    /// Board width
+    #[arg(short, long, default_value_t = 10)]
+    width: i32,
+
+    /// Board height
+    #[arg(short, long, default_value_t = 10)]
+    height: i32,
+
+    /// Sleep milliseconds
+    #[arg(short, long, default_value_t = 100)]
+    sleepmillis: u64,
+
+    /// Print help
+    #[arg(long, action = clap::ArgAction::Help)]
+    help: Option<bool>,
+}
 
 #[derive(Debug, PartialEq, Eq)]
 struct Board {
@@ -101,8 +118,10 @@ impl Board {
 }
 
 fn main() {
-    let sleep_duration = time::Duration::from_millis(SLEEP_MILLIS);
-    let mut board = glider(WIDTH, HEIGHT);
+    let args = Args::parse();
+
+    let sleep_duration = time::Duration::from_millis(args.sleepmillis);
+    let mut board = glider(args.width, args.height);
 
     loop {
         cls();
@@ -112,7 +131,7 @@ fn main() {
         }
 
         board = board.next_gen();
-        goto(&(WIDTH + 1, HEIGHT + 1));
+        goto(&(args.width + 1, args.height + 1));
         io::stdout().flush().unwrap();
         thread::sleep(sleep_duration);
     }
