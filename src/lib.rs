@@ -149,9 +149,9 @@ mod tests {
     #[test]
     fn test_parse_input_file() {
         let tests = vec![(
-            "1 23\n4\n5 6\n7 8\n9 10\n11 12\n",
+            "21 23\n4\n5 6\n7 8\n9 10\n11 12\n",
             InputFile {
-                width: 1,
+                width: 21,
                 height: 23,
                 cell_num: 4,
                 cells: vec![(5, 6), (7, 8), (9, 10), (11, 12)],
