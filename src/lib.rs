@@ -1,3 +1,9 @@
+use nom::bytes::complete::tag;
+use nom::character::complete::{i32, line_ending};
+use nom::multi::count;
+use nom::sequence::{separated_pair, terminated};
+use nom::IResult;
+
 pub type Pos = (i32, i32);
 
 #[derive(Debug, PartialEq, Eq)]
@@ -5,6 +11,14 @@ pub struct Board {
     cells: Vec<Pos>,
     width: i32,
     height: i32,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct InputFile {
+    pub width: i32,
+    pub height: i32,
+    pub cell_num: i32,
+    pub cells: Vec<(i32, i32)>,
 }
 
 impl Board {
@@ -105,9 +119,48 @@ impl Board {
     }
 }
 
+fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
+    let (remaining, (w, h)) = parse_integer_pair(input)?;
+    let (remaining, cell_num) = parse_integer_single(remaining)?;
+    let (remaining, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
+    Ok((
+        remaining,
+        InputFile {
+            width: w,
+            height: h,
+            cell_num,
+            cells,
+        },
+    ))
+}
+
+fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {
+    terminated(separated_pair(i32, tag(" "), i32), line_ending)(input)
+}
+
+fn parse_integer_single(input: &str) -> IResult<&str, i32> {
+    terminated(i32, line_ending)(input)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_input_file() {
+        let tests = vec![(
+            "1 23\n4\n5 6\n7 8\n9 10\n11 12\n",
+            InputFile {
+                width: 1,
+                height: 23,
+                cell_num: 4,
+                cells: vec![(5, 6), (7, 8), (9, 10), (11, 12)],
+            },
+        )];
+        for (input, expect) in tests {
+            assert_eq!(parse_input_file(input), Ok(("", expect)));
+        }
+    }
 
     #[test]
     fn test_board_next_gen() {
