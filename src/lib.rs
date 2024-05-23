@@ -120,14 +120,14 @@ impl Board {
 }
 
 fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
-    let (remaining, (w, h)) = parse_integer_pair(input)?;
+    let (remaining, (width, height)) = parse_integer_pair(input)?;
     let (remaining, cell_num) = parse_integer_single(remaining)?;
     let (remaining, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
     Ok((
         remaining,
         InputFile {
-            width: w,
-            height: h,
+            width,
+            height,
             cell_num,
             cells,
         },
