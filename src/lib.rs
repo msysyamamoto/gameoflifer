@@ -3,6 +3,14 @@ use nom::character::complete::{i32, line_ending};
 use nom::multi::count;
 use nom::sequence::{separated_pair, terminated};
 use nom::IResult;
+use std::io::Write;
+use std::{
+    error::Error,
+    fs::File,
+    io::{self, BufRead, BufReader},
+};
+
+type MyResult<T> = Result<T, Box<dyn Error>>;
 
 pub type Pos = (i32, i32);
 
@@ -119,6 +127,35 @@ impl Board {
     }
 }
 
+pub fn run(filename: &str) -> MyResult<()> {
+    match open(filename) {
+        Err(err) => eprintln!("{}: {}", filename, err),
+        Ok(mut file) => {
+            let mut buf = String::new();
+            file.read_to_string(&mut buf)?;
+            match parse_input_file(&buf) {
+                Err(err) => eprintln!("{}: {}", filename, err),
+                Ok((_, input)) => {
+                    let mut board = Board::new(input.width, input.height, &input.cells);
+                    loop {
+                        cls();
+                        show_cells(&board);
+                        if board.is_extinct() {
+                            break;
+                        }
+                        board = board.next_gen();
+                        goto(&(board.width() + 1, board.height() + 1));
+                        io::stdout().flush().unwrap();
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
     let (remaining, (width, height)) = parse_integer_pair(input)?;
     let (remaining, cell_num) = parse_integer_single(remaining)?;
@@ -140,6 +177,32 @@ fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {
 
 fn parse_integer_single(input: &str) -> IResult<&str, i32> {
     terminated(i32, line_ending)(input)
+}
+
+fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
+    match filename {
+        "-" => Ok(Box::new(BufReader::new(io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
+    }
+}
+
+fn show_cells(board: &Board) {
+    board.walk(|pos| {
+        write_at(&pos, 'O');
+    });
+}
+
+fn write_at(pos: &Pos, c: char) {
+    goto(pos);
+    print!("{}", c);
+}
+
+fn goto((x, y): &Pos) {
+    print!("\x1b[{};{}H", *y, *x);
+}
+
+fn cls() {
+    print!("\x1b[2J");
 }
 
 #[cfg(test)]
