@@ -29,6 +29,21 @@ pub struct InputFile {
     pub cells: Vec<(i32, i32)>,
 }
 
+#[derive(Debug)]
+pub struct Config {
+    filename: String,
+    sleepmillis: u64,
+}
+
+impl Config {
+    pub fn new(filename: String, sleepmillis: u64) -> Self {
+        Self {
+            filename,
+            sleepmillis,
+        }
+    }
+}
+
 impl Board {
     pub fn new(width: i32, height: i32, cells: &Vec<Pos>) -> Self {
         Self {
@@ -127,33 +142,34 @@ impl Board {
     }
 }
 
-pub fn run(filename: &str) -> MyResult<()> {
-    match open(filename) {
-        Err(err) => eprintln!("{}: {}", filename, err),
+pub fn run(config: Config) -> MyResult<()> {
+    match open(&config.filename) {
+        Err(err) => eprintln!("{}: {}", config.filename, err),
         Ok(mut file) => {
             let mut buf = String::new();
             file.read_to_string(&mut buf)?;
             match parse_input_file(&buf) {
-                Err(err) => eprintln!("{}: {}", filename, err),
-                Ok((_, input)) => {
-                    let mut board = Board::new(input.width, input.height, &input.cells);
-                    loop {
-                        cls();
-                        show_cells(&board);
-                        if board.is_extinct() {
-                            break;
-                        }
-                        board = board.next_gen();
-                        goto(&(board.width() + 1, board.height() + 1));
-                        io::stdout().flush().unwrap();
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                    }
-                }
+                Err(err) => eprintln!("{}: {}", config.filename, err),
+                Ok((_, input)) => main_loop(&config, &input),
             }
         }
     }
-
     Ok(())
+}
+
+fn main_loop(config: &Config, input: &InputFile) {
+    let mut board = Board::new(input.width, input.height, &input.cells);
+    loop {
+        cls();
+        show_cells(&board);
+        if board.is_extinct() {
+            break;
+        }
+        board = board.next_gen();
+        goto(&(board.width() + 1, board.height() + 1));
+        io::stdout().flush().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(config.sleepmillis));
+    }
 }
 
 fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
