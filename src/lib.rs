@@ -10,7 +10,7 @@ use std::{
     io::{self, BufRead, BufReader},
 };
 
-type MyResult<T> = Result<T, Box<dyn Error>>;
+type MyResult<'a, T> = Result<T, Box<dyn Error + 'a>>;
 
 pub type Pos = (i32, i32);
 
@@ -142,15 +142,15 @@ impl Board {
     }
 }
 
-pub fn run(config: Config) -> MyResult<()> {
+pub fn run(config: Config) -> MyResult<'static, ()> {
+    let mut buf = String::new();
     match open(&config.filename) {
         Err(err) => eprintln!("{}: {}", config.filename, err),
         Ok(mut file) => {
-            let mut buf = String::new();
             file.read_to_string(&mut buf)?;
             match parse_input_file(&buf) {
                 Err(err) => eprintln!("{}: {}", config.filename, err),
-                Ok((_, input)) => main_loop(&config, &input),
+                Ok(input) => main_loop(&config, &input),
             }
         }
     }
@@ -172,19 +172,16 @@ fn main_loop(config: &Config, input: &InputFile) {
     }
 }
 
-fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
+fn parse_input_file(input: &str) -> MyResult<InputFile> {
     let (remaining, (width, height)) = parse_integer_pair(input)?;
     let (remaining, cell_num) = parse_integer_single(remaining)?;
-    let (remaining, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
-    Ok((
-        remaining,
-        InputFile {
-            width,
-            height,
-            cell_num,
-            cells,
-        },
-    ))
+    let (_, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
+    Ok(InputFile {
+        width,
+        height,
+        cell_num,
+        cells,
+    })
 }
 
 fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {
@@ -237,7 +234,7 @@ mod tests {
             },
         )];
         for (input, expect) in tests {
-            assert_eq!(parse_input_file(input), Ok(("", expect)));
+            assert_eq!(parse_input_file(input).unwrap(), expect);
         }
     }
 
