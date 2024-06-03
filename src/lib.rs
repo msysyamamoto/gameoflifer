@@ -1,3 +1,4 @@
+use anyhow::Result;
 use nom::bytes::complete::tag;
 use nom::character::complete::{i32, line_ending};
 use nom::multi::count;
@@ -5,12 +6,9 @@ use nom::sequence::{separated_pair, terminated};
 use nom::IResult;
 use std::io::Write;
 use std::{
-    error::Error,
     fs::File,
     io::{self, BufRead, BufReader},
 };
-
-type MyResult<'a, T> = Result<T, Box<dyn Error + 'a>>;
 
 pub type Pos = (i32, i32);
 
@@ -142,15 +140,15 @@ impl Board {
     }
 }
 
-pub fn run(config: Config) -> MyResult<'static, ()> {
-    let mut buf = String::new();
+pub fn run(config: Config) -> Result<()> {
     match open(&config.filename) {
         Err(err) => eprintln!("{}: {}", config.filename, err),
         Ok(mut file) => {
+            let mut buf = String::new();
             file.read_to_string(&mut buf)?;
             match parse_input_file(&buf) {
                 Err(err) => eprintln!("{}: {}", config.filename, err),
-                Ok(input) => main_loop(&config, &input),
+                Ok((_, ifs)) => main_loop(&config, &ifs),
             }
         }
     }
@@ -172,16 +170,19 @@ fn main_loop(config: &Config, input: &InputFile) {
     }
 }
 
-fn parse_input_file(input: &str) -> MyResult<InputFile> {
+fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
     let (remaining, (width, height)) = parse_integer_pair(input)?;
     let (remaining, cell_num) = parse_integer_single(remaining)?;
-    let (_, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
-    Ok(InputFile {
-        width,
-        height,
-        cell_num,
-        cells,
-    })
+    let (remaining, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
+    Ok((
+        remaining,
+        InputFile {
+            width,
+            height,
+            cell_num,
+            cells,
+        },
+    ))
 }
 
 fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {
@@ -192,7 +193,7 @@ fn parse_integer_single(input: &str) -> IResult<&str, i32> {
     terminated(i32, line_ending)(input)
 }
 
-fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
+fn open(filename: &str) -> Result<Box<dyn BufRead>> {
     match filename {
         "-" => Ok(Box::new(BufReader::new(io::stdin()))),
         _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
@@ -234,7 +235,7 @@ mod tests {
             },
         )];
         for (input, expect) in tests {
-            assert_eq!(parse_input_file(input).unwrap(), expect);
+            assert_eq!(parse_input_file(input), Ok(("", expect)));
         }
     }
 
