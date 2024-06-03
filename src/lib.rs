@@ -95,16 +95,17 @@ impl Board {
     }
 
     fn births(&self) -> Vec<Pos> {
-        let mut new_cells = vec![];
-        for x in 1..=self.width {
-            for y in 1..=self.height {
-                let pos = (x, y);
-                if self.is_empty(&pos) && self.live_neighbs(&pos) == 3 {
-                    new_cells.push(pos);
-                }
-            }
-        }
-        new_cells
+        let mut bs: Vec<Pos> = self
+            .cells
+            .iter()
+            .flat_map(|pos| self.neighbs(pos))
+            .collect();
+        bs.sort();
+        bs.dedup();
+
+        bs.into_iter()
+            .filter(|pos| self.is_empty(pos) && self.live_neighbs(pos) == 3)
+            .collect()
     }
 
     fn neighbs(&self, pos: &Pos) -> Vec<Pos> {
