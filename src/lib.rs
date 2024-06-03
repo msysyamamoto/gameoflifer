@@ -1,6 +1,6 @@
 use anyhow::Result;
 use nom::bytes::complete::tag;
-use nom::character::complete::{i32, line_ending};
+use nom::character::complete::{i32, line_ending, u32};
 use nom::multi::count;
 use nom::sequence::{separated_pair, terminated};
 use nom::IResult;
@@ -17,14 +17,6 @@ pub struct Board {
     cells: Vec<Pos>,
     width: i32,
     height: i32,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct InputFile {
-    pub width: i32,
-    pub height: i32,
-    pub cell_num: i32,
-    pub cells: Vec<(i32, i32)>,
 }
 
 #[derive(Debug)]
@@ -148,15 +140,14 @@ pub fn run(config: Config) -> Result<()> {
             file.read_to_string(&mut buf)?;
             match parse_input_file(&buf) {
                 Err(err) => eprintln!("{}: {}", config.filename, err),
-                Ok((_, ifs)) => main_loop(&config, &ifs),
+                Ok((_, board)) => main_loop(&config, board),
             }
         }
     }
     Ok(())
 }
 
-fn main_loop(config: &Config, input: &InputFile) {
-    let mut board = Board::new(input.width, input.height, &input.cells);
+fn main_loop(config: &Config, mut board: Board) {
     loop {
         cls();
         show_cells(&board);
@@ -170,17 +161,17 @@ fn main_loop(config: &Config, input: &InputFile) {
     }
 }
 
-fn parse_input_file(input: &str) -> IResult<&str, InputFile> {
+fn parse_input_file(input: &str) -> IResult<&str, Board> {
     let (remaining, (width, height)) = parse_integer_pair(input)?;
     let (remaining, cell_num) = parse_integer_single(remaining)?;
     let (remaining, cells) = count(parse_integer_pair, cell_num as usize)(remaining)?;
+
     Ok((
         remaining,
-        InputFile {
+        Board {
+            cells,
             width,
             height,
-            cell_num,
-            cells,
         },
     ))
 }
@@ -189,8 +180,8 @@ fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {
     terminated(separated_pair(i32, tag(" "), i32), line_ending)(input)
 }
 
-fn parse_integer_single(input: &str) -> IResult<&str, i32> {
-    terminated(i32, line_ending)(input)
+fn parse_integer_single(input: &str) -> IResult<&str, u32> {
+    terminated(u32, line_ending)(input)
 }
 
 fn open(filename: &str) -> Result<Box<dyn BufRead>> {
@@ -227,11 +218,10 @@ mod tests {
     fn test_parse_input_file() {
         let tests = vec![(
             "21 23\n4\n5 6\n7 8\n9 10\n11 12\n",
-            InputFile {
+            Board {
+                cells: vec![(5, 6), (7, 8), (9, 10), (11, 12)],
                 width: 21,
                 height: 23,
-                cell_num: 4,
-                cells: vec![(5, 6), (7, 8), (9, 10), (11, 12)],
             },
         )];
         for (input, expect) in tests {
