@@ -8,6 +8,10 @@ struct Args {
     #[arg(short, long, default_value_t = String::from("-"))]
     filename: String,
 
+    /// Character representing a living cell.
+    #[arg(short, long, default_value_t = 'O')]
+    character: char,
+
     /// Sleep milliseconds
     #[arg(short, long, default_value_t = 100)]
     sleepmillis: u64,
@@ -19,7 +23,7 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    if let Err(e) = run(Config::new(args.filename, args.sleepmillis)) {
+    if let Err(e) = run(Config::new(args.filename, args.sleepmillis, args.character)) {
         eprintln!("{}", e);
         std::process::exit(1);
     }

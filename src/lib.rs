@@ -15,21 +15,23 @@ pub type Pos = (i32, i32);
 #[derive(Debug, PartialEq, Eq)]
 pub struct Board {
     cells: Vec<Pos>,
-    width: i32,
     height: i32,
+    width: i32,
 }
 
 #[derive(Debug)]
 pub struct Config {
     filename: String,
     sleepmillis: u64,
+    character: char,
 }
 
 impl Config {
-    pub fn new(filename: String, sleepmillis: u64) -> Self {
+    pub fn new(filename: String, sleepmillis: u64, character: char) -> Self {
         Self {
             filename,
             sleepmillis,
+            character,
         }
     }
 }
@@ -151,7 +153,7 @@ pub fn run(config: Config) -> Result<()> {
 fn main_loop(config: &Config, mut board: Board) {
     loop {
         cls();
-        show_cells(&board);
+        show_cells(&board, config.character);
         if board.is_extinct() {
             break;
         }
@@ -192,9 +194,9 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
     }
 }
 
-fn show_cells(board: &Board) {
+fn show_cells(board: &Board, ch: char) {
     board.walk(|pos| {
-        write_at(&pos, 'O');
+        write_at(&pos, ch);
     });
 }
 
